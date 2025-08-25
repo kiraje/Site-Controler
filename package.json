@@ -1,0 +1,16 @@
+{
+  "name": "multi-site-control-panel",
+  "version": "1.0.0",
+  "description": "Firebase-based control panel for managing multiple sites",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "npx serve dist"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {}
+}

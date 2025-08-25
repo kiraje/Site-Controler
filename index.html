@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Multi-Site Control Panel</title>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+        
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(100px);
+            transition: all 0.3s ease;
+            z-index: 2000;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .toast.success {
+            border-left: 4px solid #28a745;
+        }
+        
+        .toast.error {
+            border-left: 4px solid #dc3545;
+        }
+        
+        .toast.info {
+            border-left: 4px solid #007bff;
+        }
+        
+        .toast-icon {
+            font-size: 20px;
+        }
+        
+        .toast-message {
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .site-card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .site-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .site-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .site-id {
+            font-size: 12px;
+            color: #999;
+            font-family: monospace;
+            margin-top: 5px;
+        }
+        
+        .site-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 26px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #28a745;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        
+        .code-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .code-btn:hover {
+            background: #0056b3;
+        }
+        
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        
+        /* Add Site Form */
+        .add-site-form {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .form-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .form-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .form-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-input.error {
+            border-color: #dc3545;
+        }
+        
+        .add-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .add-btn:hover {
+            background: #5a67d8;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 700px;
+            position: relative;
+        }
+        
+        .close {
+            color: #aaa;
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+        
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            position: relative;
+        }
+        
+        .copy-btn:hover {
+            background: #218838;
+        }
+        
+        .copy-btn.copied {
+            background: #28a745;
+        }
+        
+        .copy-btn.copied:after {
+            content: '✓ Copied!';
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            background: white;
+            border-radius: 15px;
+            color: #999;
+        }
+        
+        /* Confirm Delete */
+        .confirm-delete {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 2000;
+        }
+        
+        .confirm-delete.show {
+            display: block;
+        }
+        
+        .confirm-delete p {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .confirm-delete button {
+            margin: 0 5px;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .confirm-yes {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .confirm-no {
+            background: #6c757d;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎛️ Site Control Center</h1>
+        
+        <!-- Add Site Form -->
+        <div class="add-site-form">
+            <div class="form-header">Add New Site</div>
+            <div class="form-group">
+                <input type="text" 
+                       id="newSiteName" 
+                       class="form-input" 
+                       placeholder="Enter site name (e.g., My Portfolio)"
+                       onkeypress="if(event.key==='Enter') addSite()">
+                <button class="add-btn" onclick="addSite()">Add Site</button>
+            </div>
+        </div>
+        
+        <div id="sites-container">
+            <div class="empty-state">No sites added yet. Add your first site above!</div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span class="toast-icon"></span>
+        <span class="toast-message"></span>
+    </div>
+
+    <!-- Code Modal -->
+    <div id="codeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>PHP Code for: <span id="modalSiteName"></span></h2>
+            <p style="color: #666; margin: 10px 0;">Add this code to the top of your site's index.php file:</p>
+            <pre id="phpCode"></pre>
+            <button class="copy-btn" id="copyBtn" onclick="copyCode()">📋 Copy Code</button>
+        </div>
+    </div>
+
+    <!-- Confirm Delete -->
+    <div id="confirmDelete" class="confirm-delete">
+        <p>Delete site "<span id="deleteSiteName"></span>"?</p>
+        <button class="confirm-yes" onclick="confirmDeleteSite()">Delete</button>
+        <button class="confirm-no" onclick="cancelDelete()">Cancel</button>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        firebase.initializeApp({
+            apiKey: "AIzaSyDHbDfqa-LdsbbtNg0QUr7rSeXomqx6n-c",
+            authDomain: "tlemons-46212.firebaseapp.com",
+            databaseURL: "https://tlemons-46212-default-rtdb.firebaseio.com/",
+            projectId: "tlemons-46212"
+        });
+        
+        const db = firebase.database();
+        let sitesData = {};
+        let siteToDelete = null;
+        
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = toast.querySelector('.toast-icon');
+            const msg = toast.querySelector('.toast-message');
+            
+            // Set icon based on type
+            if (type === 'success') {
+                icon.textContent = '✅';
+            } else if (type === 'error') {
+                icon.textContent = '❌';
+            } else if (type === 'info') {
+                icon.textContent = 'ℹ️';
+            }
+            
+            msg.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            // Auto hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Convert site name to ID (lowercase, no spaces)
+        function nameToId(name) {
+            return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+        
+        // Add new site
+        function addSite() {
+            const input = document.getElementById('newSiteName');
+            const siteName = input.value.trim();
+            
+            if (!siteName) {
+                input.classList.add('error');
+                showToast('Please enter a site name', 'error');
+                return;
+            }
+            
+            const siteId = nameToId(siteName);
+            
+            // Check if site already exists
+            if (sitesData[siteId]) {
+                input.classList.add('error');
+                showToast('A site with this name already exists', 'error');
+                return;
+            }
+            
+            // Create site with default filter.php
+            const siteData = {
+                name: siteName,
+                status: 'off'
+            };
+            
+            db.ref(`sites/${siteId}`).set(siteData);
+            input.value = ''; // Clear input
+            input.classList.remove('error');
+            showToast(`Site "${siteName}" added successfully!`, 'success');
+        }
+        
+        // Load all sites
+        function loadSites() {
+            db.ref('sites').on('value', (snapshot) => {
+                sitesData = snapshot.val() || {};
+                renderSites();
+            });
+        }
+        
+        // Render sites
+        function renderSites() {
+            const container = document.getElementById('sites-container');
+            
+            if (Object.keys(sitesData).length === 0) {
+                container.innerHTML = '<div class="empty-state">No sites added yet. Add your first site above!</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            Object.keys(sitesData).forEach(siteId => {
+                const site = sitesData[siteId];
+                
+                const siteCard = `
+                    <div class="site-card">
+                        <div class="site-header">
+                            <div>
+                                <div class="site-name">${site.name}</div>
+                                <div class="site-id">ID: ${siteId}</div>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="code-btn" onclick="showCode('${siteId}')">Get Code</button>
+                                <button class="delete-btn" onclick="deleteSite('${siteId}')">Delete</button>
+                            </div>
+                        </div>
+                        
+                        <div class="site-controls">
+                            <div class="control-item">
+                                <span>Filter Status:</span>
+                                <label class="switch">
+                                    <input type="checkbox" 
+                                           id="${siteId}-status" 
+                                           ${site.status === 'on' ? 'checked' : ''}
+                                           onchange="toggleStatus('${siteId}')">
+                                    <span class="slider"></span>
+                                </label>
+                                <span style="color: ${site.status === 'on' ? '#28a745' : '#999'}; font-weight: bold;">
+                                    ${site.status === 'on' ? 'ON' : 'OFF'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += siteCard;
+            });
+        }
+        
+        // Toggle status
+        function toggleStatus(siteId) {
+            const checkbox = document.getElementById(`${siteId}-status`);
+            const value = checkbox.checked ? 'on' : 'off';
+            db.ref(`sites/${siteId}/status`).set(value);
+            showToast(`Status changed to ${value.toUpperCase()}`, 'info');
+        }
+        
+        // Delete site
+        function deleteSite(siteId) {
+            siteToDelete = siteId;
+            document.getElementById('deleteSiteName').textContent = sitesData[siteId].name;
+            document.getElementById('confirmDelete').classList.add('show');
+        }
+        
+        function confirmDeleteSite() {
+            if (siteToDelete) {
+                const siteName = sitesData[siteToDelete].name;
+                db.ref(`sites/${siteToDelete}`).remove();
+                showToast(`Site "${siteName}" deleted`, 'success');
+                siteToDelete = null;
+            }
+            document.getElementById('confirmDelete').classList.remove('show');
+        }
+        
+        function cancelDelete() {
+            siteToDelete = null;
+            document.getElementById('confirmDelete').classList.remove('show');
+        }
+        
+        // Show PHP code
+        function showCode(siteId) {
+            const site = sitesData[siteId];
+            
+            const phpCode = `<?php
+// ${site.name} - Firebase Control
+$firebase_url = 'https://tlemons-46212-default-rtdb.firebaseio.com/sites/${siteId}/status.json';
+
+// Get filter status
+$status = trim(@file_get_contents($firebase_url), '"');
+
+// Apply filter only if status is ON
+if ($status === 'on') {
+    require __DIR__ . '/filter.php';
+}
+
+// Continue with normal site
+?>`;
+            
+            document.getElementById('modalSiteName').textContent = site.name;
+            document.getElementById('phpCode').textContent = phpCode;
+            document.getElementById('codeModal').style.display = 'block';
+        }
+        
+        // Close modal
+        function closeModal() {
+            document.getElementById('codeModal').style.display = 'none';
+            document.getElementById('copyBtn').classList.remove('copied');
+        }
+        
+        // Copy code
+        function copyCode() {
+            const code = document.getElementById('phpCode').textContent;
+            const btn = document.getElementById('copyBtn');
+            
+            navigator.clipboard.writeText(code).then(() => {
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = code;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+        
+        // Initialize
+        loadSites();
+        
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('codeModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Remove error class on input
+        document.getElementById('newSiteName').addEventListener('input', function() {
+            this.classList.remove('error');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Site Control Panel</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🎛️ Site Control Center</h1>
+        
+        <div class="add-site-form">
+            <div class="form-header">Add New Site</div>
+            <div class="form-group">
+                <input type="text" 
+                       id="newSiteName" 
+                       class="form-input" 
+                       placeholder="Enter site name (e.g., My Portfolio)">
+                <button class="add-btn" id="addSiteBtn">Add Site</button>
+            </div>
+        </div>
+        
+        <div id="sites-container">
+            <div class="empty-state">No sites added yet. Add your first site above!</div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">
+        <span class="toast-icon"></span>
+        <span class="toast-message"></span>
+    </div>
+
+    <div id="codeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeModalBtn">&times;</span>
+            <h2>PHP Code for: <span id="modalSiteName"></span></h2>
+            <p style="color: #666; margin: 10px 0;">Add this code to the top of your site's index.php file:</p>
+            <pre id="phpCode"></pre>
+            <button class="copy-btn" id="copyBtn">📋 Copy Code</button>
+        </div>
+    </div>
+
+    <div id="confirmDelete" class="confirm-delete">
+        <p>Delete site "<span id="deleteSiteName"></span>"?</p>
+        <button class="confirm-yes" id="confirmYesBtn">Delete</button>
+        <button class="confirm-no" id="confirmNoBtn">Cancel</button>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
