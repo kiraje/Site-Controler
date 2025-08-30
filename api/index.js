@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, set, get, remove, child } from 'firebase/database';
+import { getDatabase, ref, set, get, remove } from 'firebase/database';
 
 const FIREBASE_CONFIG = {
     apiKey: "AIzaSyDHbDfqa-LdsbbtNg0QUr7rSeXomqx6n-c",
@@ -51,6 +51,22 @@ if ($status === 'on') {
 // Continue with normal site
 ?>`;
 };
+
+// Root endpoint
+app.get('/api', (req, res) => {
+    res.json({
+        message: 'Filter Switch API',
+        version: '1.0.0',
+        endpoints: {
+            createSite: 'POST /api/sites',
+            listSites: 'GET /api/sites',
+            getSite: 'GET /api/sites/:id',
+            updateStatus: 'PUT /api/sites/:id/status',
+            deleteSite: 'DELETE /api/sites/:id',
+            getPhpCode: 'GET /api/sites/:id/php-code'
+        }
+    });
+});
 
 // 1. Create Site
 app.post('/api/sites', authenticate, async (req, res) => {
@@ -230,26 +246,13 @@ app.get('/api/sites/:siteId/php-code', authenticate, async (req, res) => {
 });
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// For Vercel deployment
-if (process.env.VERCEL) {
-    // Export for Vercel serverless function
-    export default app;
-} else {
-    // Local development
-    const PORT = process.env.PORT || 3001;
-    app.listen(PORT, () => {
-        console.log(`API Server running on http://localhost:${PORT}`);
-        console.log(`Health check: http://localhost:${PORT}/health`);
-        console.log(`\nAPI Endpoints:`);
-        console.log(`  POST   /api/sites           - Create new site`);
-        console.log(`  GET    /api/sites           - List all sites`);
-        console.log(`  GET    /api/sites/:id       - Get site details`);
-        console.log(`  PUT    /api/sites/:id/status - Update site status`);
-        console.log(`  DELETE /api/sites/:id       - Delete site`);
-        console.log(`  GET    /api/sites/:id/php-code - Get PHP code`);
-    });
-}
+// Handle 404
+app.use((req, res) => {
+    res.status(404).json({ error: 'Endpoint not found' });
+});
+
+export default app;
